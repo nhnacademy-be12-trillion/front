@@ -69,7 +69,6 @@ jobs:
             REGISTRY_OWNER: ${{ env.REGISTRY_OWNER }}
             DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
             GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
           script: |
             SERVICE_NAME="front-server"
 
