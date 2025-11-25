@@ -1,0 +1,97 @@
+name: Front-Server package
+
+on:
+  push:
+    branches: [ "dev" ]
+  workflow_dispatch:
+
+env:
+  REGISTRY_OWNER: nhnacademy-be12-trillion
+  REGISTRY: ghcr.io
+  IMAGE_NAME: front
+  DEPLOY_DIR: ~/msa-project
+  HOST_PORT: 10402
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies & Build
+        run: |
+          npm install # 의존성 설치
+          npm run build # ⭐️ Build 명령어 실행 (dist/ 폴더 생성)
+
+      - name: GitHub Packages 로그인
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+
+      - name: 이미지 태그 세팅
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.REGISTRY_OWNER }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest # latest 태그 고정
+
+      - name: Build & Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Deploy on vis SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_IP }}
+          username: ${{ secrets.SSH_ID }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          
+          # ⭐️ GHCR_TOKEN 및 환경 변수를 SSH 스크립트로 전달
+          env:
+            REGISTRY: ${{ env.REGISTRY }}
+            REGISTRY_OWNER: ${{ env.REGISTRY_OWNER }}
+            DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
+            GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          script: |
+            SERVICE_NAME="front-server"
+            
+            echo "SSH 접속 및 디렉토리 이동..."
+            mkdir -p ${DEPLOY_DIR}
+            cd ${DEPLOY_DIR}
+            
+            echo "Docker Registry 로그인"
+            # GHCR_TOKEN (GITHUB_TOKEN)을 사용하여 로그인
+            echo ${GHCR_TOKEN} | docker login ${REGISTRY} -u ${REGISTRY_OWNER} --password-stdin
+            
+            echo "최신 프론트 이미지 Pull 및 서비스 재시작..."
+
+            # 1. 최신 이미지 Pull
+            docker-compose pull ${SERVICE_NAME}
+
+            # 2. 프론트 서비스만 재시작
+            docker-compose up -d --no-deps ${SERVICE_NAME}
+
+            echo "Docker Registry 로그아웃..."
+            docker logout ${REGISTRY}
+            
+            echo "프론트 서버 배포 완료!"
