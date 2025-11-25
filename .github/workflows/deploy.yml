@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -58,13 +58,13 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
       - name: Deploy on vis SSH
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_IP }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
-          
+
           # ⭐️ GHCR_TOKEN 및 환경 변수를 SSH 스크립트로 전달
           env:
             REGISTRY: ${{ env.REGISTRY }}
@@ -74,15 +74,15 @@ jobs:
 
           script: |
             SERVICE_NAME="front-server"
-            
+
             echo "SSH 접속 및 디렉토리 이동..."
             mkdir -p ${DEPLOY_DIR}
             cd ${DEPLOY_DIR}
-            
+
             echo "Docker Registry 로그인"
             # GHCR_TOKEN (GITHUB_TOKEN)을 사용하여 로그인
             echo ${GHCR_TOKEN} | docker login ${REGISTRY} -u ${REGISTRY_OWNER} --password-stdin
-            
+
             echo "최신 프론트 이미지 Pull 및 서비스 재시작..."
 
             # 1. 최신 이미지 Pull
@@ -93,5 +93,5 @@ jobs:
 
             echo "Docker Registry 로그아웃..."
             docker logout ${REGISTRY}
-            
+
             echo "프론트 서버 배포 완료!"
