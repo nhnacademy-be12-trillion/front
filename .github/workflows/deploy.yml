@@ -60,14 +60,12 @@ jobs:
       - name: Deploy on vis SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_IP }}
+          host: ${{ secrets.SSH_IP }}   # ⭐️ 4칸 들여쓰기
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
-
-          # ⭐️ GHCR_TOKEN 및 환경 변수를 SSH 스크립트로 전달
-          env:
-            REGISTRY: ${{ env.REGISTRY }}
+          env: # ⭐️ port와 동일하게 4칸 들여쓰기 (Line 70)
+            REGISTRY: ${{ env.REGISTRY }} # ⭐️ env 아래는 6칸 들여쓰기
             REGISTRY_OWNER: ${{ env.REGISTRY_OWNER }}
             DEPLOY_DIR: ${{ env.DEPLOY_DIR }}
             GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
